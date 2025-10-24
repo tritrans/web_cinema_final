@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TestMail;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Web\HomeController;
 use App\Http\Controllers\Web\AuthController;
@@ -12,6 +14,12 @@ use App\Http\Controllers\Api\ImageProxyController;
 
 // Home routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+Route::get('/send-test-email', function () {
+    $recipientEmail = 'your_email@example.com'; // Replace with your email address
+    Mail::to($recipientEmail)->send(new TestMail());
+    return 'Test email sent to ' . $recipientEmail;
+});
 
 // Authentication routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -502,6 +510,3 @@ Route::get('/test/role-check', function() {
         'session_id' => session()->getId()
     ]);
 });
-
-
-

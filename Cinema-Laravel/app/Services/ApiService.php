@@ -19,7 +19,15 @@ class ApiService
 
     public function isAuthenticated()
     {
-        return !empty($this->token) || !empty(Session::get('user'));
+        $hasToken = !empty($this->token);
+        $hasUser = !empty(Session::get('user'));
+        \Log::info('Authentication check:', [
+            'has_token' => $hasToken,
+            'has_user' => $hasUser,
+            'token' => $this->token ? 'exists' : 'null',
+            'user' => Session::get('user') ? 'exists' : 'null'
+        ]);
+        return $hasToken || $hasUser;
     }
 
     public function setToken($token)

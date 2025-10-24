@@ -18,9 +18,16 @@ class AuthController extends Controller
 
     public function showLogin()
     {
-        if ($this->apiService->isAuthenticated()) {
-            return redirect()->route('home');
-        }
+        \Log::info('Show login called');
+        $isAuth = $this->apiService->isAuthenticated();
+        \Log::info('Authentication check result:', ['is_authenticated' => $isAuth]);
+        
+        // Temporarily disable authentication check to debug
+        // if ($isAuth) {
+        //     \Log::info('User already authenticated, redirecting to home');
+        //     return redirect()->route('home');
+        // }
+        \Log::info('Showing login form');
         return view('auth.login');
     }
 
@@ -40,6 +47,8 @@ class AuthController extends Controller
             'password' => $request->password,
         ]);
 
+        \Log::info('Login API result:', $result);
+
         if ($result['success']) {
             // Store user data and JWT token in session
             if (isset($result['data']['user'])) {
@@ -55,25 +64,43 @@ class AuthController extends Controller
             session()->save();
             \Log::info('Session saved after login');
             
+            // Debug session data
+            \Log::info('Session data after save:', [
+                'user' => session('user'),
+                'jwt_token' => session('jwt_token'),
+                'session_id' => session()->getId()
+            ]);
+            
             // Set JWT token in both session and cookie for 7 days
+            \Log::info('Creating redirect response to home');
             $response = redirect()->route('home')->with('success', 'Đăng nhập thành công!');
             if (isset($result['data']['access_token'])) {
                 // Also store in cookie for persistence
                 $response->cookie('jwt_token', $result['data']['access_token'], 60 * 24 * 7); // 7 days
                 // Add script to store in localStorage
                 $response->with('jwt_token', $result['data']['access_token']);
+                \Log::info('JWT token stored in cookie');
             }
+            \Log::info('Returning redirect response');
             return $response;
         }
 
+        \Log::error('Login failed:', $result);
         return back()->withErrors(['email' => $result['message'] ?? 'Đăng nhập thất bại'])->withInput();
     }
 
     public function showRegister()
     {
-        if ($this->apiService->isAuthenticated()) {
-            return redirect()->route('home');
-        }
+        \Log::info('Show register called');
+        $isAuth = $this->apiService->isAuthenticated();
+        \Log::info('Authentication check result:', ['is_authenticated' => $isAuth]);
+        
+        // Temporarily disable authentication check to debug
+        // if ($isAuth) {
+        //     \Log::info('User already authenticated, redirecting to home');
+        //     return redirect()->route('home');
+        // }
+        \Log::info('Showing register form');
         return view('auth.register');
     }
 
@@ -112,7 +139,7 @@ class AuthController extends Controller
         \Log::info('API register response:', $result);
 
         if ($result['success']) {
-            // Send OTP for verification
+            // Send OTP via API
             $otpResponse = $this->apiService->sendOtp([
                 'email' => $request->email,
                 'type' => 'verification'
@@ -121,6 +148,7 @@ class AuthController extends Controller
             \Log::info('OTP send response:', $otpResponse);
 
             if ($otpResponse['success']) {
+                \Log::info('OTP sent successfully via API');
                 return redirect()->route('verify-otp', [
                     'email' => $request->email,
                     'name' => $request->name,
@@ -129,7 +157,7 @@ class AuthController extends Controller
                 ])->with('success', 'Mã OTP đã được gửi đến email của bạn.');
             } else {
                 // If OTP sending failed, still redirect to verify-otp page but with warning
-                \Log::warning('OTP sending failed, but proceeding with registration:', $otpResponse);
+                \Log::warning('OTP sending failed via API:', $otpResponse);
                 return redirect()->route('verify-otp', [
                     'email' => $request->email,
                     'name' => $request->name,
@@ -141,6 +169,7 @@ class AuthController extends Controller
 
         // If initial registration API call failed
         \Log::error('Register API failed:', $result);
+        \Log::error('Redirecting back to register with error');
         return back()->withErrors(['email' => $result['message'] ?? 'Đăng ký thất bại'])->withInput();
     }
 
@@ -235,29 +264,21 @@ class AuthController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        // First verify OTP
+        // First verify OTP with all required data
         $verifyResponse = $this->apiService->verifyOtp([
             'email' => $request->email,
             'otp' => $request->otp,
+            'name' => $request->name,
+            'password' => $request->password,
+            'password_confirmation' => $request->password_confirmation,
         ]);
 
         if (!$verifyResponse['success']) {
             return back()->withErrors(['otp' => $verifyResponse['message'] ?? 'Mã OTP không hợp lệ'])->withInput();
         }
 
-        // Then complete registration
-        $registerResponse = $this->apiService->register([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $request->password,
-            'password_confirmation' => $request->password_confirmation,
-        ]);
-
-        if ($registerResponse['success']) {
-            return redirect()->route('login')->with('success', 'Đăng ký thành công! Vui lòng đăng nhập.');
-        }
-
-        return back()->withErrors(['email' => $registerResponse['message'] ?? 'Đăng ký thất bại'])->withInput();
+        // OTP verified and user created successfully
+        return redirect()->route('login')->with('success', 'Đăng ký thành công! Vui lòng đăng nhập.');
     }
 
     public function logout()
