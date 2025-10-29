@@ -39,11 +39,15 @@
                 <h3 class="text-lg font-semibold mb-4">Thông tin cơ bản</h3>
                 <div class="space-y-4">
                     <div class="flex items-center space-x-4">
-                        <div class="h-16 w-16 rounded-full bg-primary flex items-center justify-center">
-                            <span class="text-primary-foreground text-xl font-bold">
-                                {{ strtoupper(substr($userData['name'] ?? 'U', 0, 1)) }}
-                            </span>
-                        </div>
+                        @if(isset($userData['avatar']) && $userData['avatar'])
+                            <img src="{{ $userData['avatar'] }}" alt="Avatar" class="h-16 w-16 rounded-full object-cover">
+                        @else
+                            <div class="h-16 w-16 rounded-full bg-primary flex items-center justify-center">
+                                <span class="text-primary-foreground text-xl font-bold">
+                                    {{ strtoupper(substr($userData['name'] ?? 'U', 0, 1)) }}
+                                </span>
+                            </div>
+                        @endif
                         <div>
                             <h4 class="text-xl font-semibold">{{ $userData['name'] ?? 'N/A' }}</h4>
                             <p class="text-muted-foreground">{{ $userData['email'] ?? 'N/A' }}</p>

@@ -120,6 +120,14 @@ class ImageHelper
             return '/images/placeholder-snack.svg';
         }
 
+        // If it's a storage path (like Snack/Combo.jpg), convert to API URL
+        if (!str_starts_with($imageUrl, 'http') && !str_starts_with($imageUrl, '/')) {
+            $apiUrl = config('app.api_url', 'http://127.0.0.1:8000/api');
+            // Remove /api from the end to get base URL
+            $baseUrl = rtrim($apiUrl, '/api');
+            return $baseUrl . '/storage/' . $imageUrl;
+        }
+
         return self::getSafeImageUrl($imageUrl, '/images/placeholder-snack.svg');
     }
 

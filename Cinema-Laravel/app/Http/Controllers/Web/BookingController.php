@@ -25,14 +25,6 @@ class BookingController extends Controller
             $timeSlot = $request->get('time', 'all');
             $scheduleId = $request->get('schedule');
             
-            // Debug logging
-            \Log::info('Booking request:', [
-                'movie' => $movieSlug,
-                'theater' => $theaterId,
-                'date' => $date,
-                'time' => $timeSlot
-            ]);
-
             if (!$movieSlug) {
                 return redirect()->route('home');
             }
@@ -48,25 +40,10 @@ class BookingController extends Controller
             $schedulesResponse = $this->apiService->getMovieSchedules($movie['id']);
             $allSchedules = [];
             
-            // Debug logging
-            \Log::info('Schedules API response:', [
-                'movie_id' => $movie['id'],
-                'response' => $schedulesResponse
-            ]);
-            
             if ($schedulesResponse['success'] && isset($schedulesResponse['data'])) {
                 $allSchedules = $schedulesResponse['data'];
-                \Log::info('Schedules loaded successfully:', [
-                    'count' => count($allSchedules),
-                    'schedules' => $allSchedules
-                ]);
             } else {
                 // Log error for debugging
-                \Log::error('Schedules API failed:', [
-                    'movie_id' => $movie['id'],
-                    'response' => $schedulesResponse,
-                    'api_url' => $this->apiService->getBaseUrl() . '/schedules/movie/' . $movie['id']
-                ]);
                 return redirect()->route('home')->with('error', 'Không thể tải lịch chiếu từ API: ' . ($schedulesResponse['message'] ?? 'Unknown error'));
             }
 
@@ -100,17 +77,6 @@ class BookingController extends Controller
             
             $theaters = $uniqueTheaters;
             
-            // Log for debugging
-            \Log::info('Theaters loaded:', [
-                'count' => count($theaters),
-                'theaters' => array_map(function($t) {
-                    return [
-                        'id' => $t['id'] ?? 'N/A',
-                        'name' => $t['name'] ?? 'N/A',
-                        'address' => $t['address'] ?? 'N/A'
-                    ];
-                }, $theaters)
-            ]);
 
             // Get selected theater
             $selectedTheater = null;
@@ -153,14 +119,7 @@ class BookingController extends Controller
                     ->toArray();
 
                 // Filter out past showtimes
-                $now = Carbon::now('Asia/Ho_Chi_Minh');
-                \Log::info('Current time for filtering:', [
-                    'now' => $now->format('Y-m-d H:i:s'),
-                    'timezone' => $now->getTimezone()->getName(),
-                    'timestamp' => $now->timestamp
-                ]);
-                
-                $schedules = collect($schedules)
+                $now = Carbon::now('Asia/Ho_Chi_Minh');$schedules = collect($schedules)
                     ->filter(function($schedule) use ($now) {
                         // Parse showtime - if it's stored as UTC, treat it as local time instead
                         $startTimeRaw = $schedule['start_time'];
@@ -175,20 +134,6 @@ class BookingController extends Controller
                         }
                         
                         $isPast = $showtime->lte($now);
-                        
-                        \Log::info('Schedule time check:', [
-                            'schedule_id' => $schedule['id'] ?? 'unknown',
-                            'start_time_raw' => $startTimeRaw,
-                            'showtime_parsed' => $showtime->format('Y-m-d H:i:s'),
-                            'showtime_timezone' => $showtime->getTimezone()->getName(),
-                            'current_time' => $now->format('Y-m-d H:i:s'),
-                            'current_timezone' => $now->getTimezone()->getName(),
-                            'showtime_timestamp' => $showtime->timestamp,
-                            'current_timestamp' => $now->timestamp,
-                            'is_past' => $isPast,
-                            'will_show' => !$isPast
-                        ]);
-                        
                         return !$isPast;
                     })
                     ->values()
@@ -217,16 +162,6 @@ class BookingController extends Controller
                 }
             }
             
-            // Debug logging
-            \Log::info('Booking data:', [
-                'movie_id' => $movie['id'],
-                'theaters_count' => count($theaters),
-                'all_schedules_count' => count($allSchedules),
-                'selected_theater' => $selectedTheater ? $selectedTheater['id'] : null,
-                'schedules_count' => count($schedules),
-                'available_dates' => $availableDates
-            ]);
-
             // Get selected schedule if any
             $selectedSchedule = null;
             if ($scheduleId) {
@@ -245,14 +180,7 @@ class BookingController extends Controller
                 'schedules'
             ));
 
-        } catch (\Exception $e) {
-            \Log::error('Booking error:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            return redirect()->route('home')->with('error', 'Không thể tải trang đặt vé: ' . $e->getMessage());
+        } catch (\Exception $e) {return redirect()->route('home')->with('error', 'Không thể tải trang đặt vé: ' . $e->getMessage());
         }
     }
 
@@ -386,13 +314,7 @@ class BookingController extends Controller
                 'currentUser'
             ));
 
-        } catch (\Exception $e) {
-            \Log::error('Checkout error:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return redirect()->route('home')->with('error', 'Không thể tải trang thanh toán');
+        } catch (\Exception $e) {return redirect()->route('home')->with('error', 'Không thể tải trang thanh toán');
         }
     }
 
@@ -444,18 +366,7 @@ class BookingController extends Controller
                 'schedule_id' => $scheduleId,
                 'seat_numbers' => $seatNumbers,
                 'lock_duration_minutes' => 10
-            ]);
-
-            \Log::info('Lock seats response:', $lockResponse);
-
-            if (!$lockResponse['success']) {
-                \Log::error('Lock seats failed:', [
-                    'schedule_id' => $scheduleId,
-                    'seat_numbers' => $seatNumbers,
-                    'response' => $lockResponse
-                ]);
-                
-                // Parse error message to show user-friendly message
+            ]);if (!$lockResponse['success']) {// Parse error message to show user-friendly message
                 $errorMessage = $lockResponse['message'] ?? 'Unknown error';
                 if (str_contains($errorMessage, 'already reserved') || str_contains($errorMessage, 'already sold')) {
                     return redirect()->route('booking.seats', ['schedule' => $scheduleId])
@@ -509,13 +420,7 @@ class BookingController extends Controller
                 return redirect()->back()->with('error', $bookingResponse['message'] ?? 'Có lỗi xảy ra khi đặt vé');
             }
 
-        } catch (\Exception $e) {
-            \Log::error('Booking confirm error:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return redirect()->back()->with('error', 'Có lỗi xảy ra khi đặt vé');
+        } catch (\Exception $e) {return redirect()->back()->with('error', 'Có lỗi xảy ra khi đặt vé');
         }
     }
 
@@ -538,9 +443,7 @@ class BookingController extends Controller
             }
 
             return $seatNumbers;
-        } catch (\Exception $e) {
-            \Log::error('Error getting seat numbers:', ['error' => $e->getMessage()]);
-            return [];
+        } catch (\Exception $e) {return [];
         }
     }
 
@@ -599,13 +502,7 @@ class BookingController extends Controller
                 'seatsTotal'
             ));
 
-        } catch (\Exception $e) {
-            \Log::error('Snacks error:', [
-                'message' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return redirect()->route('home')->with('error', 'Không thể tải trang chọn đồ ăn');
+        } catch (\Exception $e) {return redirect()->route('home')->with('error', 'Không thể tải trang chọn đồ ăn');
         }
     }
 
@@ -626,12 +523,7 @@ class BookingController extends Controller
             $booking = $bookingResponse['data'];
 
             return view('booking.success', compact('booking'));
-        } catch (\Exception $e) {
-            \Log::error('Booking success error:', [
-                'message' => $e->getMessage(),
-                'booking_id' => $bookingId
-            ]);
-            return redirect()->route('home')->with('error', 'Không thể tải thông tin đặt vé');
+        } catch (\Exception $e) {return redirect()->route('home')->with('error', 'Không thể tải thông tin đặt vé');
         }
     }
 }

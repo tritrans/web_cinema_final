@@ -238,10 +238,45 @@
                     <h3 class="text-lg font-semibold mb-4">
                         {{ $user['role'] === 'violation_manager' ? 'Đánh giá cần kiểm tra' : 'Đánh giá mới nhất' }}
                     </h3>
-                    <div class="space-y-4">
-                        <div class="text-center py-8 text-muted-foreground">
-                            <p>Chưa có dữ liệu đánh giá</p>
-                        </div>
+                    <div class="space-y-4" id="latest-reviews">
+                        @if(isset($stats['reviews']['latest']) && count($stats['reviews']['latest']) > 0)
+                            @foreach($stats['reviews']['latest'] as $review)
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex-shrink-0">
+                                        @if(isset($review['user_avatar_url']) && $review['user_avatar_url'])
+                                            <img src="{{ $review['user_avatar_url'] }}" alt="Avatar" class="w-8 h-8 rounded-full">
+                                        @else
+                                            <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
+                                                <span class="text-white text-sm font-medium">
+                                                    {{ strtoupper(substr($review['user_name'] ?? 'U', 0, 1)) }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900">{{ $review['user_name'] ?? 'Người dùng ẩn danh' }}</p>
+                                        <div class="flex items-center space-x-1 mt-1">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                @if($i <= ($review['rating'] ?? 0))
+                                                    <i data-lucide="star" class="h-3 w-3 text-yellow-400 fill-current"></i>
+                                                @else
+                                                    <i data-lucide="star" class="h-3 w-3 text-gray-300"></i>
+                                                @endif
+                                            @endfor
+                                            <span class="text-xs text-gray-500 ml-1">{{ $review['rating'] ?? 0 }}/5</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600 mt-1">{{ Str::limit($review['comment'] ?? '', 100) }}</p>
+                                        <p class="text-xs text-gray-400 mt-1">
+                                            {{ isset($review['created_at']) ? \Carbon\Carbon::parse($review['created_at'])->diffForHumans() : 'N/A' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="text-center py-8 text-muted-foreground">
+                                <p>Chưa có dữ liệu đánh giá</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -252,10 +287,35 @@
                     <h3 class="text-lg font-semibold mb-4">
                         {{ $user['role'] === 'violation_manager' ? 'Bình luận cần kiểm tra' : 'Bình luận mới nhất' }}
                     </h3>
-                    <div class="space-y-4">
-                        <div class="text-center py-8 text-muted-foreground">
-                            <p>Chưa có dữ liệu bình luận</p>
-                        </div>
+                    <div class="space-y-4" id="latest-comments">
+                        @if(isset($stats['comments']['latest']) && count($stats['comments']['latest']) > 0)
+                            @foreach($stats['comments']['latest'] as $comment)
+                                <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex-shrink-0">
+                                        @if(isset($comment['user_avatar_url']) && $comment['user_avatar_url'])
+                                            <img src="{{ $comment['user_avatar_url'] }}" alt="Avatar" class="w-8 h-8 rounded-full">
+                                        @else
+                                            <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                                                <span class="text-white text-sm font-medium">
+                                                    {{ strtoupper(substr($comment['user_name'] ?? 'U', 0, 1)) }}
+                                                </span>
+                                            </div>
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900">{{ $comment['user_name'] ?? 'Người dùng ẩn danh' }}</p>
+                                        <p class="text-sm text-gray-600 mt-1">{{ Str::limit($comment['content'] ?? '', 100) }}</p>
+                                        <p class="text-xs text-gray-400 mt-1">
+                                            {{ isset($comment['created_at']) ? \Carbon\Carbon::parse($comment['created_at'])->diffForHumans() : 'N/A' }}
+                                        </p>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @else
+                            <div class="text-center py-8 text-muted-foreground">
+                                <p>Chưa có dữ liệu bình luận</p>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>

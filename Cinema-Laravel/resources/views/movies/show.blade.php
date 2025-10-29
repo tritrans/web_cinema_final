@@ -282,31 +282,31 @@
                                                                 </div>
                                                             @else
                                                                 <div class="flex items-center gap-3 mb-2">
-                                                                    @if(isset($reply['user']['avatar']) && $reply['user']['avatar'])
+                                                                    @if(isset($reply['user_avatar_url']) && $reply['user_avatar_url'])
                                                                         @php
-                                                                            $avatarUrl = $reply['user']['avatar'];
+                                                                            $avatarUrl = $reply['user_avatar_url'];
                                                                             if (strpos($avatarUrl, 'http') !== 0) {
                                                                                 $avatarUrl = url('storage/' . $avatarUrl);
                                                                             }
                                                                         @endphp
                                                                         <img src="{{ $avatarUrl }}" 
-                                                                             alt="{{ $reply['user']['name'] ?? 'User' }}" 
+                                                                             alt="{{ $reply['user_name'] ?? 'User' }}" 
                                                                              class="w-6 h-6 rounded-full object-cover"
                                                                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                                         <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium" style="display: none;">
-                                                                            {{ strtoupper(substr($reply['user']['name'] ?? 'U', 0, 1)) }}
+                                                                            {{ strtoupper(substr($reply['user_name'] ?? 'U', 0, 1)) }}
                                                                         </div>
                                                                     @else
                                                                         <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium">
-                                                                            {{ strtoupper(substr($reply['user']['name'] ?? 'U', 0, 1)) }}
+                                                                            {{ strtoupper(substr($reply['user_name'] ?? 'U', 0, 1)) }}
                                                                         </div>
                                                                     @endif
                                                                     <div>
-                                                                        <p class="font-medium text-sm">{{ $reply['user']['name'] ?? 'Người dùng ẩn danh' }}</p>
+                                                                        <p class="font-medium text-sm">{{ $reply['user_name'] ?? 'Người dùng ẩn danh' }}</p>
                                                                         <p class="text-xs text-muted-foreground">{{ \Carbon\Carbon::parse($reply['created_at'])->diffForHumans() }}</p>
                                                                     </div>
                                                                 </div>
-                                                                <p class="text-sm text-muted-foreground">{{ $reply['content'] }}</p>
+                                                                <p class="text-sm text-muted-foreground">{{ $reply['content'] ?? $reply['comment'] ?? '' }}</p>
                                                             @endif
                                                         </div>
                                                     @endforeach
@@ -399,28 +399,28 @@
                                         <div class="border-b border-border pb-4 last:border-b-0">
                                             @if($comment['is_hidden'] ?? false)
                                                 <div class="flex items-center gap-3 mb-2">
-                                                    @if(isset($comment['user']['avatar']) && $comment['user']['avatar'])
+                                                    @if(isset($comment['user_avatar_url']) && $comment['user_avatar_url'])
                                                         @php
-                                                            $avatarUrl = $comment['user']['avatar'];
+                                                            $avatarUrl = $comment['user_avatar_url'];
                                                             // If it's a relative path, prepend the web app URL
                                                             if (strpos($avatarUrl, 'http') !== 0) {
                                                                 $avatarUrl = url('storage/' . $avatarUrl);
                                                             }
                                                         @endphp
                                                         <img src="{{ $avatarUrl }}" 
-                                                             alt="{{ $comment['user']['name'] ?? 'User' }}" 
+                                                             alt="{{ $comment['user_name'] ?? 'User' }}" 
                                                              class="w-8 h-8 rounded-full object-cover"
                                                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium" style="display: none;">
-                                                            {{ strtoupper(substr($comment['user']['name'] ?? 'U', 0, 1)) }}
+                                                            {{ strtoupper(substr($comment['user_name'] ?? 'U', 0, 1)) }}
                                                         </div>
                                                     @else
                                                         <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                                            {{ strtoupper(substr($comment['user']['name'] ?? 'U', 0, 1)) }}
+                                                            {{ strtoupper(substr($comment['user_name'] ?? 'U', 0, 1)) }}
                                                         </div>
                                                     @endif
                                                     <div>
-                                                        <p class="font-medium">{{ $comment['user']['name'] ?? 'Người dùng ẩn danh' }}</p>
+                                                        <p class="font-medium">{{ $comment['user_name'] ?? 'Người dùng ẩn danh' }}</p>
                                                         <p class="text-xs text-muted-foreground">{{ \Carbon\Carbon::parse($comment['created_at'])->diffForHumans() }}</p>
                                                     </div>
                                                 </div>
@@ -430,28 +430,28 @@
                                                 </div>
                                             @else
                                                 <div class="flex items-center gap-3 mb-2">
-                                                    @if(isset($comment['user']['avatar']) && $comment['user']['avatar'])
+                                                    @if(isset($comment['user_avatar_url']) && $comment['user_avatar_url'])
                                                         @php
-                                                            $avatarUrl = $comment['user']['avatar'];
+                                                            $avatarUrl = $comment['user_avatar_url'];
                                                             // If it's a relative path, prepend the web app URL
                                                             if (strpos($avatarUrl, 'http') !== 0) {
                                                                 $avatarUrl = url('storage/' . $avatarUrl);
                                                             }
                                                         @endphp
                                                         <img src="{{ $avatarUrl }}" 
-                                                             alt="{{ $comment['user']['name'] ?? 'User' }}" 
+                                                             alt="{{ $comment['user_name'] ?? 'User' }}" 
                                                              class="w-8 h-8 rounded-full object-cover"
                                                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                         <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium" style="display: none;">
-                                                            {{ strtoupper(substr($comment['user']['name'] ?? 'U', 0, 1)) }}
+                                                            {{ strtoupper(substr($comment['user_name'] ?? 'U', 0, 1)) }}
                                                         </div>
                                                     @else
                                                         <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
-                                                            {{ strtoupper(substr($comment['user']['name'] ?? 'U', 0, 1)) }}
+                                                            {{ strtoupper(substr($comment['user_name'] ?? 'U', 0, 1)) }}
                                                         </div>
                                                     @endif
                                                     <div>
-                                                        <p class="font-medium">{{ $comment['user']['name'] ?? 'Người dùng ẩn danh' }}</p>
+                                                        <p class="font-medium">{{ $comment['user_name'] ?? 'Người dùng ẩn danh' }}</p>
                                                         <p class="text-xs text-muted-foreground">{{ \Carbon\Carbon::parse($comment['created_at'])->diffForHumans() }}</p>
                                                     </div>
                                                 </div>
@@ -469,31 +469,31 @@
                                                                 </div>
                                                             @else
                                                                 <div class="flex items-center gap-3 mb-2">
-                                                                    @if(isset($reply['user']['avatar']) && $reply['user']['avatar'])
+                                                                    @if(isset($reply['user_avatar_url']) && $reply['user_avatar_url'])
                                                                         @php
-                                                                            $avatarUrl = $reply['user']['avatar'];
+                                                                            $avatarUrl = $reply['user_avatar_url'];
                                                                             if (strpos($avatarUrl, 'http') !== 0) {
                                                                                 $avatarUrl = url('storage/' . $avatarUrl);
                                                                             }
                                                                         @endphp
                                                                         <img src="{{ $avatarUrl }}" 
-                                                                             alt="{{ $reply['user']['name'] ?? 'User' }}" 
+                                                                             alt="{{ $reply['user_name'] ?? 'User' }}" 
                                                                              class="w-6 h-6 rounded-full object-cover"
                                                                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                                                         <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium" style="display: none;">
-                                                                            {{ strtoupper(substr($reply['user']['name'] ?? 'U', 0, 1)) }}
+                                                                            {{ strtoupper(substr($reply['user_name'] ?? 'U', 0, 1)) }}
                                                                         </div>
                                                                     @else
                                                                         <div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white text-xs font-medium">
-                                                                            {{ strtoupper(substr($reply['user']['name'] ?? 'U', 0, 1)) }}
+                                                                            {{ strtoupper(substr($reply['user_name'] ?? 'U', 0, 1)) }}
                                                                         </div>
                                                                     @endif
                                                                     <div>
-                                                                        <p class="font-medium text-sm">{{ $reply['user']['name'] ?? 'Người dùng ẩn danh' }}</p>
+                                                                        <p class="font-medium text-sm">{{ $reply['user_name'] ?? 'Người dùng ẩn danh' }}</p>
                                                                         <p class="text-xs text-muted-foreground">{{ \Carbon\Carbon::parse($reply['created_at'])->diffForHumans() }}</p>
                                                                     </div>
                                                                 </div>
-                                                                <p class="text-sm text-muted-foreground">{{ $reply['content'] }}</p>
+                                                                <p class="text-sm text-muted-foreground">{{ $reply['content'] ?? $reply['comment'] ?? '' }}</p>
                                                             @endif
                                                         </div>
                                                     @endforeach
@@ -576,7 +576,8 @@
                         <div class="bg-card border rounded-lg shadow-sm">
                             <div class="p-6">
                                 <h3 class="text-lg font-bold text-foreground mb-4">Phim liên quan</h3>
-                                <div class="space-y-4">
+                                <!-- 2-column responsive grid -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     @foreach($relatedMovies as $relatedMovie)
                                         <a href="{{ route('movies.show.slug', $relatedMovie['slug'] ?? $relatedMovie['id']) }}" class="flex gap-3 group">
                                             <div class="w-16 h-20 rounded-lg overflow-hidden flex-shrink-0">
@@ -766,7 +767,8 @@ document.getElementById('review-form').addEventListener('submit', async function
             },
             body: JSON.stringify({
                 rating: formData.get('rating'),
-                comment: formData.get('comment')
+                comment: formData.get('comment'),
+                user_id: {{ session('user')['id'] ?? 'null' }}
             })
         });
         
@@ -805,7 +807,8 @@ document.getElementById('comment-form').addEventListener('submit', async functio
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                content: formData.get('content')
+                content: formData.get('content'),
+                user_id: {{ session('user')['id'] ?? 'null' }}
             })
         });
         
@@ -862,7 +865,8 @@ document.addEventListener('submit', async function(e) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    content: formData.get('content')
+                    content: formData.get('content'),
+                    user_id: {{ session('user')['id'] ?? 'null' }}
                 })
             });
             
@@ -901,7 +905,8 @@ document.addEventListener('submit', async function(e) {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    content: formData.get('content')
+                    content: formData.get('content'),
+                    user_id: {{ session('user')['id'] ?? 'null' }}
                 })
             });
             

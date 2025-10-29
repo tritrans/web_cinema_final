@@ -1,7 +1,15 @@
 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" rx="8" fill="#f3f4f6"/>
-  <path d="M32 16C24.268 16 18 22.268 18 30C18 37.732 24.268 44 32 44C39.732 44 46 37.732 46 30C46 22.268 39.732 16 32 16ZM32 20C37.522 20 42 24.478 42 30C42 35.522 37.522 40 32 40C26.478 40 22 35.522 22 30C22 24.478 26.478 20 32 20Z" fill="#9ca3af"/>
-  <path d="M28 26H36V28H28V26Z" fill="#9ca3af"/>
-  <path d="M28 30H36V32H28V30Z" fill="#9ca3af"/>
-  <path d="M28 34H32V36H28V34Z" fill="#9ca3af"/>
+  <rect width="64" height="64" rx="8" fill="#F3F4F6"/>
+  <g transform="translate(16, 16)">
+    <!-- Coffee cup icon -->
+    <rect x="8" y="12" width="16" height="12" rx="2" fill="#9CA3AF" stroke="#6B7280" stroke-width="1"/>
+    <rect x="10" y="14" width="12" height="8" rx="1" fill="#D1D5DB"/>
+    
+    <!-- Handle -->
+    <path d="M24 16 Q28 16 28 20 Q28 24 24 24" stroke="#6B7280" stroke-width="2" fill="none"/>
+    
+    <!-- Steam -->
+    <path d="M12 8 Q14 6 16 8 Q18 6 20 8" stroke="#9CA3AF" stroke-width="1" fill="none"/>
+    <path d="M14 6 Q16 4 18 6 Q20 4 22 6" stroke="#9CA3AF" stroke-width="1" fill="none"/>
+  </g>
 </svg>

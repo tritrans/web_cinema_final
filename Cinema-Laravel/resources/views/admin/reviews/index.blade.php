@@ -172,7 +172,17 @@
                                             </div>
                                         </div>
                                     </div>
-                                    @if(isset($review['comment']) && $review['comment'])
+                                    @if(isset($review['is_hidden']) && $review['is_hidden'])
+                                        <div class="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-md mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="eye-off" class="h-4 w-4"></i>
+                                                <span class="text-sm font-medium">Nội dung này đã bị ẩn do vi phạm</span>
+                                            </div>
+                                            @if(isset($review['hidden_reason']))
+                                                <p class="text-xs mt-1">Lý do: {{ $review['hidden_reason'] }}</p>
+                                            @endif
+                                        </div>
+                                    @elseif(isset($review['comment']) && $review['comment'])
                                         <p class="text-sm">{{ $review['comment'] }}</p>
                                     @endif
                                 </div>
@@ -465,8 +475,56 @@ function approveReview(reviewId) {
 }
 
 function reportViolation(reviewId) {
-    const reason = prompt('Nhập lý do báo cáo vi phạm:');
-    if (reason && reason.trim()) {
+    // Create modal for violation reporting
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 class="text-lg font-semibold mb-4">Báo cáo vi phạm</h3>
+            <form id="violationForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Loại vi phạm:</label>
+                    <select id="violationType" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="inappropriate_content">Nội dung không phù hợp</option>
+                        <option value="spam">Spam</option>
+                        <option value="harassment">Quấy rối</option>
+                        <option value="fake_review">Đánh giá giả</option>
+                        <option value="offensive_language">Ngôn ngữ xúc phạm</option>
+                        <option value="copyright_violation">Vi phạm bản quyền</option>
+                        <option value="other">Khác</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Lý do chi tiết:</label>
+                    <textarea id="violationReason" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Mô tả chi tiết về vi phạm..."></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeViolationModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Báo cáo</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle form submission
+    document.getElementById('violationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const violationType = document.getElementById('violationType').value;
+        const reason = document.getElementById('violationReason').value.trim();
+        
+        if (!reason) {
+            alert('Vui lòng nhập lý do báo cáo vi phạm');
+            return;
+        }
+        
+        // Debug log
+        console.log('Reporting violation for review ID:', reviewId);
+        console.log('Violation type:', violationType);
+        console.log('Description:', reason);
+        
         // Call API to report violation
         fetch('/api/violations', {
             method: 'POST',
@@ -477,14 +535,15 @@ function reportViolation(reviewId) {
             body: JSON.stringify({
                 reportable_id: reviewId,
                 reportable_type: 'App\\Models\\Review',
-                violation_type: 'inappropriate_content',
+                violation_type: violationType,
                 description: reason
             })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Đã báo cáo vi phạm thành công!');
+                alert('Đã báo cáo vi phạm thành công! Báo cáo đang chờ xử lý.');
+                closeViolationModal();
             } else {
                 alert('Lỗi khi báo cáo vi phạm: ' + (data.message || 'Unknown error'));
             }
@@ -493,6 +552,13 @@ function reportViolation(reviewId) {
             console.error('Error reporting violation:', error);
             alert('Lỗi khi báo cáo vi phạm: ' + error.message);
         });
+    });
+}
+
+function closeViolationModal() {
+    const modal = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-50');
+    if (modal) {
+        modal.remove();
     }
 }
 

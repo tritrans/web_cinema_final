@@ -15,6 +15,11 @@ class HomeController extends Controller
         $this->apiService = $apiService;
     }
 
+    /**
+     * Hiển thị trang chủ với danh sách phim nổi bật
+     * 
+     * @return \Illuminate\View\View
+     */
     public function index()
     {
         try {
@@ -61,9 +66,7 @@ class HomeController extends Controller
             $heroMovie = !empty($featuredMovies) ? $featuredMovies[0] : null;
 
             return view('home', compact('featuredMovies', 'recentMovies', 'heroMovie'));
-        } catch (\Exception $e) {
-            \Log::error('HomeController error: ' . $e->getMessage());
-            return view('home', [
+        } catch (\Exception $e) {return view('home', [
                 'featuredMovies' => [],
                 'recentMovies' => [],
                 'heroMovie' => null,

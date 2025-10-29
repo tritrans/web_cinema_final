@@ -64,7 +64,19 @@
                                     <p class="text-sm text-muted-foreground mb-2">
                                         Phim: <span class="font-medium">{{ $comment['movie_title'] ?? 'N/A' }}</span>
                                     </p>
-                                    <p class="text-sm">{{ $comment['content'] ?? 'N/A' }}</p>
+                                    @if(isset($comment['is_hidden']) && $comment['is_hidden'])
+                                        <div class="bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded-md mb-2">
+                                            <div class="flex items-center gap-2">
+                                                <i data-lucide="eye-off" class="h-4 w-4"></i>
+                                                <span class="text-sm font-medium">Nội dung này đã bị ẩn do vi phạm</span>
+                                            </div>
+                                            @if(isset($comment['hidden_reason']))
+                                                <p class="text-xs mt-1">Lý do: {{ $comment['hidden_reason'] }}</p>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <p class="text-sm">{{ $comment['content'] ?? 'N/A' }}</p>
+                                    @endif
                                 </div>
                                 <div class="relative">
                                     <button onclick="toggleCommentActions({{ $comment['id'] ?? 0 }})" 
@@ -166,8 +178,56 @@ function approveComment(commentId) {
 
 // Report comment violation
 function reportCommentViolation(commentId) {
-    const reason = prompt('Nhập lý do báo cáo vi phạm:');
-    if (reason && reason.trim()) {
+    // Create modal for violation reporting
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
+            <h3 class="text-lg font-semibold mb-4">Báo cáo vi phạm</h3>
+            <form id="commentViolationForm">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Loại vi phạm:</label>
+                    <select id="commentViolationType" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="inappropriate_content">Nội dung không phù hợp</option>
+                        <option value="spam">Spam</option>
+                        <option value="harassment">Quấy rối</option>
+                        <option value="fake_review">Đánh giá giả</option>
+                        <option value="offensive_language">Ngôn ngữ xúc phạm</option>
+                        <option value="copyright_violation">Vi phạm bản quyền</option>
+                        <option value="other">Khác</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Lý do chi tiết:</label>
+                    <textarea id="commentViolationReason" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" rows="3" placeholder="Mô tả chi tiết về vi phạm..."></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeCommentViolationModal()" class="px-4 py-2 text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Hủy</button>
+                    <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Báo cáo</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle form submission
+    document.getElementById('commentViolationForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const violationType = document.getElementById('commentViolationType').value;
+        const reason = document.getElementById('commentViolationReason').value.trim();
+        
+        if (!reason) {
+            alert('Vui lòng nhập lý do báo cáo vi phạm');
+            return;
+        }
+        
+        // Debug log
+        console.log('Reporting violation for comment ID:', commentId);
+        console.log('Violation type:', violationType);
+        console.log('Description:', reason);
+        
         fetch('/api/violations', {
             method: 'POST',
             headers: {
@@ -177,14 +237,15 @@ function reportCommentViolation(commentId) {
             body: JSON.stringify({
                 reportable_type: 'App\\Models\\Comment',
                 reportable_id: commentId,
-                violation_type: 'inappropriate_content',
+                violation_type: violationType,
                 description: reason
             })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Báo cáo vi phạm thành công!');
+                alert('Báo cáo vi phạm thành công! Báo cáo đang chờ xử lý.');
+                closeCommentViolationModal();
             } else {
                 alert('Lỗi khi báo cáo vi phạm: ' + (data.message || 'Unknown error'));
             }
@@ -193,6 +254,13 @@ function reportCommentViolation(commentId) {
             console.error('Error reporting violation:', error);
             alert('Lỗi khi báo cáo vi phạm: ' + error.message);
         });
+    });
+}
+
+function closeCommentViolationModal() {
+    const modal = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-50');
+    if (modal) {
+        modal.remove();
     }
 }
 

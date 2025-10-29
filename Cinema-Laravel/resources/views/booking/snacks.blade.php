@@ -81,7 +81,7 @@
                                         <div class="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors">
                                             <div class="flex items-center gap-4">
                                                 @if($snack['image'])
-                                                    <img src="{{ \App\Helpers\ImageHelper::getSafeImageUrl($snack['image']) }}" 
+                                                    <img src="{{ \App\Helpers\ImageHelper::getSnackImage($snack) }}" 
                                                          alt="{{ $snack['name'] }}" 
                                                          class="w-16 h-16 object-cover rounded-lg"
                                                          onerror="this.src='/images/placeholder-snack.svg'">

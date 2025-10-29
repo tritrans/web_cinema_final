@@ -53,13 +53,7 @@ class ImageProxyController extends Controller
                 ->header('Cache-Control', 'public, max-age=3600')
                 ->header('Access-Control-Allow-Origin', '*');
 
-        } catch (\Exception $e) {
-            Log::error('Image proxy error: ' . $e->getMessage(), [
-                'url' => $url,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json(['error' => 'Failed to proxy image'], 500);
+        } catch (\Exception $e) {return response()->json(['error' => 'Failed to proxy image'], 500);
         }
     }
 
@@ -84,13 +78,7 @@ class ImageProxyController extends Controller
             'Sec-Fetch-Site' => 'cross-site',
         ])->timeout(15)->get($directUrl);
 
-        if (!$response->successful()) {
-            Log::error('Failed to fetch image', [
-                'url' => $directUrl,
-                'status' => $response->status(),
-                'body' => substr($response->body(), 0, 200)
-            ]);
-            return null;
+        if (!$response->successful()) {return null;
         }
 
         return [

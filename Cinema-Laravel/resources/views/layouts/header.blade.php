@@ -31,10 +31,15 @@
                                 if ($avatarUrl && strpos($avatarUrl, 'http') !== 0) {
                                     $avatarUrl = url('storage/' . $avatarUrl);
                                 }
+                                // Add timestamp to prevent caching
+                                if ($avatarUrl) {
+                                    $avatarUrl .= '?t=' . time();
+                                }
                             @endphp
                             <img src="{{ $avatarUrl ?: '/placeholder.svg' }}" 
                                  alt="{{ session('user.name') ?: session('user.email') }}" 
                                  class="avatar-image rounded-full"
+                                 id="header-avatar"
                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                             <div class="avatar-fallback text-sm" style="display: none;">
                                 {{ session('user.name') ? strtoupper(substr(session('user.name'), 0, 1)) : (session('user.email') ? strtoupper(substr(session('user.email'), 0, 1)) : 'U') }}
@@ -177,10 +182,15 @@
                                         if ($mobileAvatarUrl && strpos($mobileAvatarUrl, 'http') !== 0) {
                                             $mobileAvatarUrl = url('storage/' . $mobileAvatarUrl);
                                         }
+                                        // Add timestamp to prevent caching
+                                        if ($mobileAvatarUrl) {
+                                            $mobileAvatarUrl .= '?t=' . time();
+                                        }
                                     @endphp
                                     <img src="{{ $mobileAvatarUrl ?: '/placeholder.svg' }}" 
                                          alt="{{ session('user.name') ?: session('user.email') }}" 
                                          class="avatar-image rounded-full"
+                                         id="mobile-avatar"
                                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                     <div class="avatar-fallback" style="display: none;">
                                         {{ session('user.name') ? strtoupper(substr(session('user.name'), 0, 1)) : (session('user.email') ? strtoupper(substr(session('user.email'), 0, 1)) : 'U') }}

@@ -16,21 +16,28 @@ class AuthController extends Controller
         $this->apiService = $apiService;
     }
 
+    /**
+     * Hiển thị form đăng nhập
+     * 
+     * @return \Illuminate\View\View
+     */
     public function showLogin()
     {
-        \Log::info('Show login called');
         $isAuth = $this->apiService->isAuthenticated();
-        \Log::info('Authentication check result:', ['is_authenticated' => $isAuth]);
         
-        // Temporarily disable authentication check to debug
         // if ($isAuth) {
-        //     \Log::info('User already authenticated, redirecting to home');
         //     return redirect()->route('home');
         // }
-        \Log::info('Showing login form');
+        
         return view('auth.login');
     }
 
+    /**
+     * Xử lý đăng nhập người dùng
+     * 
+     * @param Request $request - Dữ liệu đăng nhập (email, password)
+     * @return \Illuminate\Http\RedirectResponse
+     */
     public function login(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -45,75 +52,46 @@ class AuthController extends Controller
         $result = $this->apiService->login([
             'email' => $request->email,
             'password' => $request->password,
-        ]);
-
-        \Log::info('Login API result:', $result);
-
-        if ($result['success']) {
+        ]);        if ($result['success']) {
             // Store user data and JWT token in session
             if (isset($result['data']['user'])) {
                 session(['user' => $result['data']['user']]);
-                \Log::info('User stored in session:', ['user' => $result['data']['user']]);
             }
             if (isset($result['data']['access_token'])) {
                 session(['jwt_token' => $result['data']['access_token']]);
-                \Log::info('JWT token stored in session');
             }
             
             // Force session save
             session()->save();
-            \Log::info('Session saved after login');
-            
-            // Debug session data
-            \Log::info('Session data after save:', [
-                'user' => session('user'),
-                'jwt_token' => session('jwt_token'),
-                'session_id' => session()->getId()
-            ]);
             
             // Set JWT token in both session and cookie for 7 days
-            \Log::info('Creating redirect response to home');
             $response = redirect()->route('home')->with('success', 'Đăng nhập thành công!');
             if (isset($result['data']['access_token'])) {
                 // Also store in cookie for persistence
                 $response->cookie('jwt_token', $result['data']['access_token'], 60 * 24 * 7); // 7 days
                 // Add script to store in localStorage
                 $response->with('jwt_token', $result['data']['access_token']);
-                \Log::info('JWT token stored in cookie');
             }
-            \Log::info('Returning redirect response');
+            
             return $response;
         }
-
-        \Log::error('Login failed:', $result);
+        
         return back()->withErrors(['email' => $result['message'] ?? 'Đăng nhập thất bại'])->withInput();
     }
 
     public function showRegister()
     {
-        \Log::info('Show register called');
         $isAuth = $this->apiService->isAuthenticated();
-        \Log::info('Authentication check result:', ['is_authenticated' => $isAuth]);
         
-        // Temporarily disable authentication check to debug
         // if ($isAuth) {
-        //     \Log::info('User already authenticated, redirecting to home');
         //     return redirect()->route('home');
         // }
-        \Log::info('Showing register form');
+        
         return view('auth.register');
     }
 
     public function register(Request $request)
-    {
-        \Log::info('Register request received:', [
-            'name' => $request->name,
-            'email' => $request->email,
-            'has_password' => !empty($request->password),
-            'has_password_confirmation' => !empty($request->password_confirmation)
-        ]);
-
-        $validator = Validator::make($request->all(), [
+    {$validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'email' => 'required|email',
             'password' => 'required|min:8',
@@ -130,26 +108,12 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => $request->password,
             'password_confirmation' => $request->password_confirmation,
-        ];
-
-        \Log::info('Calling API register with data:', $registerData);
-
-        $result = $this->apiService->register($registerData);
-
-        \Log::info('API register response:', $result);
-
-        if ($result['success']) {
+        ];$result = $this->apiService->register($registerData);if ($result['success']) {
             // Send OTP via API
             $otpResponse = $this->apiService->sendOtp([
                 'email' => $request->email,
                 'type' => 'verification'
-            ]);
-
-            \Log::info('OTP send response:', $otpResponse);
-
-            if ($otpResponse['success']) {
-                \Log::info('OTP sent successfully via API');
-                return redirect()->route('verify-otp', [
+            ]);if ($otpResponse['success']) {return redirect()->route('verify-otp', [
                     'email' => $request->email,
                     'name' => $request->name,
                     'password' => $request->password,
@@ -167,10 +131,7 @@ class AuthController extends Controller
             }
         }
 
-        // If initial registration API call failed
-        \Log::error('Register API failed:', $result);
-        \Log::error('Redirecting back to register with error');
-        return back()->withErrors(['email' => $result['message'] ?? 'Đăng ký thất bại'])->withInput();
+        // If initial registration API call failedreturn back()->withErrors(['email' => $result['message'] ?? 'Đăng ký thất bại'])->withInput();
     }
 
     public function showForgotPassword()

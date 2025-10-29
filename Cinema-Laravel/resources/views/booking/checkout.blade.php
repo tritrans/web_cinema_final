@@ -98,7 +98,7 @@
                                     <div class="flex items-center justify-between p-3 border rounded-lg">
                                         <div class="flex items-center gap-3">
                                             @if($snack['image'])
-                                                <img src="{{ \App\Helpers\ImageHelper::getSafeImageUrl($snack['image']) }}" 
+                                                <img src="{{ \App\Helpers\ImageHelper::getSnackImage($snack) }}" 
                                                      alt="{{ $snack['name'] }}" 
                                                      class="w-12 h-12 object-cover rounded"
                                                      onerror="this.src='/images/placeholder-snack.svg'">

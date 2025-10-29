@@ -665,8 +665,7 @@ function toggleUserStatus(userId, activate) {
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify({ activate: activate })
+            }
         })
         .then(response => response.json())
         .then(data => {

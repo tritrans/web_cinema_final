@@ -92,12 +92,7 @@ class PageController extends Controller
             }
 
             return view('info-user', compact('user'));
-        } catch (\Exception $e) {
-            \Log::error('InfoUser error:', [
-                'message' => $e->getMessage(),
-                'user_id' => session('user.id')
-            ]);
-            // Fallback to session data
+        } catch (\Exception $e) {// Fallback to session data
             $user = session('user');
             return view('info-user', compact('user'));
         }
@@ -137,19 +132,9 @@ class PageController extends Controller
                     return is_array($booking);
                 });
             }
-
-            \Log::info('My tickets data:', [
-                'user_id' => $userId,
-                'bookings_count' => count($bookings),
-                'bookings_sample' => count($bookings) > 0 ? $bookings[0] : null
-            ]);
-
+            
             return view('my-tickets', compact('bookings'));
         } catch (\Exception $e) {
-            \Log::error('My tickets error:', [
-                'message' => $e->getMessage(),
-                'user_id' => session('user.id')
-            ]);
             return redirect()->route('home')->with('error', 'Không thể tải danh sách vé');
         }
     }
@@ -172,20 +157,9 @@ class PageController extends Controller
             if ($favoritesResponse['success'] && isset($favoritesResponse['data']['data'])) {
                 $favorites = $favoritesResponse['data']['data'];
             }
-
-            \Log::info('Favorites data:', [
-                'user_id' => $userId,
-                'favorites_count' => count($favorites),
-                'favorites_sample' => count($favorites) > 0 ? $favorites[0] : null
-            ]);
-
+            
             return view('favorites', compact('favorites'));
-        } catch (\Exception $e) {
-            \Log::error('Favorites error:', [
-                'message' => $e->getMessage(),
-                'user_id' => session('user.id')
-            ]);
-            return redirect()->route('home')->with('error', 'Không thể tải danh sách yêu thích');
+        } catch (\Exception $e) {return redirect()->route('home')->with('error', 'Không thể tải danh sách yêu thích');
         }
     }
 }

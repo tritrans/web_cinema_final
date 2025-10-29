@@ -15,11 +15,6 @@ use App\Http\Controllers\Api\ImageProxyController;
 // Home routes
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
-Route::get('/send-test-email', function () {
-    $recipientEmail = 'your_email@example.com'; // Replace with your email address
-    Mail::to($recipientEmail)->send(new TestMail());
-    return 'Test email sent to ' . $recipientEmail;
-});
 
 // Authentication routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -52,33 +47,6 @@ Route::get('/movies/{id}', [MovieController::class, 'show'])->name('movies.show'
 Route::get('/movies/slug/{slug}', [MovieController::class, 'showBySlug'])->name('movies.show.slug');
 Route::get('/genres', [MovieController::class, 'genres'])->name('movies.genres');
 
-// Test routes for debugging
-Route::get('/test/schedules/{movieId}', function($movieId) {
-    $apiService = app(\App\Services\ApiService::class);
-    
-    echo "<h1>Testing Schedules API for Movie ID: $movieId</h1>";
-    
-    // Test API connection
-    echo "<h2>1. API Base URL:</h2>";
-    echo "<p>" . $apiService->getBaseUrl() . "</p>";
-    
-    // Test schedules endpoint
-    echo "<h2>2. Testing /schedules/movie/$movieId endpoint:</h2>";
-    $response = $apiService->getMovieSchedules($movieId);
-    echo "<pre>" . json_encode($response, JSON_PRETTY_PRINT) . "</pre>";
-    
-    // Test general schedules endpoint
-    echo "<h2>3. Testing /schedules endpoint:</h2>";
-    $allSchedules = $apiService->getSchedules();
-    echo "<pre>" . json_encode($allSchedules, JSON_PRETTY_PRINT) . "</pre>";
-    
-    // Test movies endpoint
-    echo "<h2>4. Testing /movies/$movieId endpoint:</h2>";
-    $movieResponse = $apiService->getMovie($movieId);
-    echo "<pre>" . json_encode($movieResponse, JSON_PRETTY_PRINT) . "</pre>";
-    
-    return "Test completed. Check the output above.";
-});
 
 // API routes for web integration
 Route::prefix('api')->group(function () {
@@ -205,6 +173,7 @@ Route::get('/info-user', [PageController::class, 'infoUser'])->name('info-user')
 Route::get('/my-tickets', [PageController::class, 'myTickets'])->name('my-tickets');
 Route::get('/favorites', [PageController::class, 'favorites'])->name('favorites');
 
+
 // Additional API routes
 Route::prefix('api')->group(function () {
     // API routes for autocomplete
@@ -256,23 +225,70 @@ Route::prefix('api')->group(function () {
             $path = $file->storeAs('uploads/avatars', $filename, 'public');
             
             if ($path) {
-                // Update user avatar in session
-                $user['avatar'] = $path;
-                session(['user' => $user]);
-                
-                // Update avatar in API (optional)
-                $apiService = app(\App\Services\ApiService::class);
-                $token = session('jwt_token');
-                if ($token) {
+                // Absolute URL using current request host to avoid wrong APP_URL
+                $avatarUrl = request()->getSchemeAndHttpHost() . '/storage/' . $path;
+                \Log::info('WEB upload-avatar start', [
+                    'user_id' => session('user.id'),
+                    'has_token' => (bool) session('jwt_token'),
+                    'avatar_url' => $avatarUrl,
+                    'path' => $path,
+                ]);
+
+            // Persist to API database FIRST
+            $apiService = app(\App\Services\ApiService::class);
+            $token = session('jwt_token') ?? request()->cookie('jwt_token');
+            if ($token) {
                     $apiService->setToken($token);
-                    $apiService->updateUserAvatar($path);
+                    // Try dedicated avatar endpoint
+                    $apiResponse = $apiService->updateUserAvatar($avatarUrl);
+                    \Log::info('WEB upload-avatar call /users/avatar', [
+                        'response_success' => is_array($apiResponse) ? ($apiResponse['success'] ?? null) : null,
+                    ]);
+                    // Fallback: try generic update if needed
+                    if (!(is_array($apiResponse) && ($apiResponse['success'] ?? false))) {
+                        $sessionUser = session('user');
+                        if (isset($sessionUser['id'])) {
+                            \Log::warning('WEB upload-avatar fallback to PUT /users/{id}', ['user_id' => $sessionUser['id']]);
+                            $apiResponse = $apiService->updateUser($sessionUser['id'], ['avatar' => $avatarUrl]);
+                            \Log::info('WEB upload-avatar fallback response', [
+                                'response_success' => is_array($apiResponse) ? ($apiResponse['success'] ?? null) : null,
+                            ]);
+                        }
+                    }
+
+                    if (!(is_array($apiResponse) && ($apiResponse['success'] ?? false))) {
+                        // Rollback stored file to avoid dangling file if desired (optional)
+                        // Storage::disk('public')->delete($path);
+                        \Log::error('WEB upload-avatar failed to persist avatar to API DB');
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Không thể cập nhật avatar vào CSDL. Vui lòng thử lại.',
+                        ], 500);
+                    }
+
+                    // Sync session from API response if available; otherwise set avatar manually
+                    if (isset($apiResponse['data'])) {
+                        session(['user' => $apiResponse['data']]);
+                    } else {
+                        $user = session('user') ?: [];
+                        $user['avatar'] = $avatarUrl;
+                        session(['user' => $user]);
+                    }
+                    session()->save();
+                } else {
+                    // No token: still update session so reload keeps new avatar
+                    $user = session('user') ?: [];
+                    $user['avatar'] = $avatarUrl;
+                    session(['user' => $user]);
+                    session()->save();
+                    \Log::warning('WEB upload-avatar no jwt_token; updated session only');
                 }
                 
                 return response()->json([
                     'success' => true,
                     'message' => 'Avatar đã được cập nhật thành công',
                     'data' => [
-                        'avatar_url' => url('storage/' . $path)
+                        'avatar_url' => $avatarUrl
                     ]
                 ]);
             } else {
@@ -324,9 +340,6 @@ Route::prefix('admin')->middleware(['api.admin'])->name('admin.')->group(functio
     Route::put('/movies/{id}', [AdminController::class, 'updateMovie'])->name('movies.update');
     Route::delete('/movies/{id}', [AdminController::class, 'deleteMovie'])->name('movies.delete');
     Route::get('/users', [AdminController::class, 'users'])->name('users');
-    Route::get('/users/test', function() {
-        return view('admin.users.test');
-    })->name('users.test');
         Route::get('/users/{id}', [AdminController::class, 'viewUser'])->name('users.view');
         Route::get('/users/{id}/edit', [AdminController::class, 'editUser'])->name('users.edit');
         Route::put('/users/{id}', [AdminController::class, 'updateUser'])->name('users.update');
@@ -337,7 +350,6 @@ Route::prefix('admin')->middleware(['api.admin'])->name('admin.')->group(functio
     Route::post('/users/{id}/revoke-admin', [AdminController::class, 'revokeUserAdminRole'])->name('users.revoke-admin');
     Route::post('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('users.toggle-status');
     Route::delete('/users/{id}', [AdminController::class, 'deleteUser'])->name('users.delete');
-    Route::get('/users/export', [AdminController::class, 'exportUsers'])->name('users.export');
     Route::get('/reviews', [AdminController::class, 'reviews'])->name('reviews');
     Route::get('/comments', [AdminController::class, 'comments'])->name('comments');
     Route::get('/theaters', [AdminController::class, 'theaters'])->name('theaters');
@@ -378,135 +390,8 @@ Route::prefix('admin')->middleware(['api.admin'])->name('admin.')->group(functio
     Route::get('/reports/export', [AdminController::class, 'exportReport'])->name('reports.export');
 });
 
-// Test export report endpoint (no auth required for testing)
-Route::get('/test/export-report', function() {
-    $adminController = app(\App\Http\Controllers\Web\AdminController::class);
-    
-    // Mock session user for testing
-    session(['user' => [
-        'id' => 1,
-        'name' => 'Test Admin',
-        'email' => 'admin@test.com',
-        'role' => 'admin'
-    ]]);
-    
-    return $adminController->exportReport();
-});
-
-// Public reports export route (temporary fix)
+// Public reports export route
 Route::get('/admin/reports/export', [AdminController::class, 'exportReport'])->name('reports.export.public');
 
-// Test export report without permission check
-Route::get('/test/export-csv', function() {
-    try {
-        // Create simple CSV content
-        $csvContent = "BÁO CÁO THỐNG KÊ HỆ THỐNG CINEMA\n";
-        $csvContent .= "Ngày xuất báo cáo: " . date('d/m/Y H:i:s') . "\n\n";
-        
-        // Movies Statistics
-        $csvContent .= "=== THỐNG KÊ PHIM ===\n";
-        $csvContent .= "Tổng số phim,10\n";
-        $csvContent .= "Phim nổi bật,3\n";
-        $csvContent .= "Phim mới tháng này,2\n\n";
-        
-        // Users Statistics
-        $csvContent .= "=== THỐNG KÊ NGƯỜI DÙNG ===\n";
-        $csvContent .= "Tổng người dùng,50\n";
-        $csvContent .= "Đăng ký tháng này,5\n";
-        $csvContent .= "Người dùng hoạt động,45\n\n";
-        
-        // Add BOM for UTF-8
-        $bom = "\xEF\xBB\xBF";
-        $csvContent = $bom . $csvContent;
-        
-        return response($csvContent)
-            ->header('Content-Type', 'text/csv; charset=UTF-8')
-            ->header('Content-Disposition', 'attachment; filename="bao_cao_thong_ke_' . date('Y-m-d') . '.csv"');
-            
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-    }
-});
-
-// Test session user info
-Route::get('/test/session', function() {
-    $user = session('user');
-    $apiService = app(\App\Services\ApiService::class);
-    
-    return response()->json([
-        'session_user' => $user,
-        'is_authenticated' => $apiService->isAuthenticated(),
-        'session_id' => session()->getId(),
-        'all_session' => session()->all()
-    ]);
-});
-
-// Test session storage
-Route::get('/test/session-storage', function() {
-    // Test storing data in session
-    session(['test_data' => 'Hello World']);
-    session(['user' => [
-        'id' => 6,
-        'name' => 'tran minh tri',
-        'email' => 'tritranminh484@gmail.com',
-        'role' => 'admin'
-    ]]);
-    
-    // Force save
-    session()->save();
-    
-    return response()->json([
-        'message' => 'Data stored in session',
-        'session_id' => session()->getId(),
-        'all_session' => session()->all()
-    ]);
-});
-
-// Test session retrieval
-Route::get('/test/session-retrieve', function() {
-    return response()->json([
-        'test_data' => session('test_data'),
-        'user' => session('user'),
-        'session_id' => session()->getId(),
-        'all_session' => session()->all()
-    ]);
-});
-
-// Test role permissions
-Route::get('/test/role-check', function() {
-    $user = session('user');
-    
-    // Test specific role permissions
-    $allowedRoles = ['admin', 'review_manager', 'movie_manager', 'violation_manager'];
-    $userRole = $user['role'] ?? 'no_role';
-    $hasAccess = $user && in_array($userRole, $allowedRoles);
-    
-    // Test menu permissions
-    $menuItems = [
-        'dashboard' => ['admin', 'review_manager', 'movie_manager', 'violation_manager'],
-        'movies' => ['admin', 'movie_manager'],
-        'theaters' => ['admin', 'movie_manager'],
-        'users' => ['admin'],
-        'reviews' => ['admin', 'review_manager', 'violation_manager'],
-        'comments' => ['admin', 'review_manager', 'violation_manager'],
-        'violations' => ['admin', 'violation_manager'],
-        'reports' => ['admin', 'review_manager']
-    ];
-    
-    $menuAccess = [];
-    foreach ($menuItems as $menu => $roles) {
-        $menuAccess[$menu] = $user && in_array($userRole, $roles);
-    }
-    
-    return response()->json([
-        'user' => $user,
-        'user_role' => $userRole,
-        'allowed_roles' => $allowedRoles,
-        'has_access' => $hasAccess,
-        'menu_access' => $menuAccess,
-        'session_id' => session()->getId()
-    ]);
-});
+// Public export routes
+Route::get('/users/export', [AdminController::class, 'exportUsers'])->name('users.export');

@@ -28,10 +28,13 @@
                                                 if (strpos($avatarUrl, 'http') !== 0) {
                                                     $avatarUrl = url('storage/' . $avatarUrl);
                                                 }
+                                                // Add timestamp to prevent caching
+                                                $avatarUrl .= '?t=' . time();
                                             @endphp
                                             <img src="{{ $avatarUrl }}" 
                                                  alt="{{ session('user.name') ?: session('user.email') }}" 
                                                  class="w-full h-full object-cover"
+                                                 id="user-avatar"
                                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                         @endif
                                         <div class="w-full h-full flex items-center justify-center text-3xl font-bold bg-gradient-to-br from-blue-500 to-purple-600 text-white {{ session('user.avatar') ? 'hidden' : '' }}">
@@ -375,12 +378,47 @@ document.getElementById('avatar-upload').addEventListener('change', async functi
         if (result.success) {
             alert('Cập nhật avatar thành công!');
             // Update the image source immediately
-            const img = document.querySelector('.h-32.w-32 img');
+            const img = document.getElementById('user-avatar');
+            const fallbackDiv = document.querySelector('.h-32.w-32 div');
             if (img) {
-                img.src = result.data.avatar_url;
+                img.src = result.data.avatar_url + '?t=' + Date.now(); // Add timestamp to force reload
+                img.style.display = 'block';
+                if (fallbackDiv) {
+                    fallbackDiv.style.display = 'none';
+                }
+            } else {
+                // If no img element exists, create one
+                const container = document.querySelector('.h-32.w-32');
+                if (container && fallbackDiv) {
+                    const newImg = document.createElement('img');
+                    newImg.src = result.data.avatar_url + '?t=' + Date.now();
+                    newImg.alt = 'User Avatar';
+                    newImg.className = 'w-full h-full object-cover';
+                    newImg.id = 'user-avatar';
+                    newImg.onerror = function() {
+                        this.style.display = 'none';
+                        fallbackDiv.style.display = 'flex';
+                    };
+                    container.insertBefore(newImg, fallbackDiv);
+                    fallbackDiv.style.display = 'none';
+                }
             }
-            // Reload page to update session
-            setTimeout(() => location.reload(), 1000);
+            // Update localStorage for consistency
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            user.avatar = result.data.avatar_url;
+            localStorage.setItem('user', JSON.stringify(user));
+            
+            // Update header avatars as well
+            const headerAvatar = document.getElementById('header-avatar');
+            const mobileAvatar = document.getElementById('mobile-avatar');
+            const newAvatarUrl = result.data.avatar_url + '?t=' + Date.now();
+            
+            if (headerAvatar) {
+                headerAvatar.src = newAvatarUrl;
+            }
+            if (mobileAvatar) {
+                mobileAvatar.src = newAvatarUrl;
+            }
         } else {
             throw new Error(result.message || 'Upload failed');
         }

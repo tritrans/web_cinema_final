@@ -10,6 +10,10 @@ class ApiService
     private $baseUrl;
     private $token;
 
+    /**
+     * Khởi tạo ApiService
+     * Thiết lập base URL và headers mặc định
+     */
     public function __construct()
     {
         $this->baseUrl = config('app.api_url', 'http://127.0.0.1:8000/api');
@@ -20,14 +24,7 @@ class ApiService
     public function isAuthenticated()
     {
         $hasToken = !empty($this->token);
-        $hasUser = !empty(Session::get('user'));
-        \Log::info('Authentication check:', [
-            'has_token' => $hasToken,
-            'has_user' => $hasUser,
-            'token' => $this->token ? 'exists' : 'null',
-            'user' => Session::get('user') ? 'exists' : 'null'
-        ]);
-        return $hasToken || $hasUser;
+        $hasUser = !empty(Session::get('user'));return $hasToken || $hasUser;
     }
 
     public function setToken($token)
@@ -86,13 +83,7 @@ class ApiService
                 'status_code' => $response->status(),
                 'errors' => $errorData['errors'] ?? null
             ];
-        } catch (\Exception $e) {
-            \Log::error('API Response parsing error: ' . $e->getMessage(), [
-                'response_status' => $response->status(),
-                'response_body' => $response->body()
-            ]);
-            
-            return [
+        } catch (\Exception $e) {return [
                 'success' => false,
                 'message' => 'Không thể xử lý phản hồi từ máy chủ',
                 'error' => $e->getMessage(),
@@ -121,15 +112,7 @@ class ApiService
         
         while ($attempt <= $retries) {
             // Check if we've exceeded maximum execution time
-            if (microtime(true) - $startTime > $maxExecutionTime) {
-                \Log::error('API Request timeout exceeded', [
-                    'method' => $method,
-                    'endpoint' => $endpoint,
-                    'attempt' => $attempt,
-                    'elapsed' => microtime(true) - $startTime
-                ]);
-                
-                return [
+            if (microtime(true) - $startTime > $maxExecutionTime) {return [
                     'success' => false,
                     'message' => 'Request timeout - quá thời gian chờ',
                     'error' => 'Execution timeout exceeded'
@@ -172,14 +155,7 @@ class ApiService
                     'message' => 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.',
                     'error' => $e->getMessage()
                 ];
-            } catch (\Exception $e) {
-                \Log::error('API Request error: ' . $e->getMessage(), [
-                    'method' => $method,
-                    'endpoint' => $endpoint,
-                    'attempt' => $attempt
-                ]);
-                
-                return [
+            } catch (\Exception $e) {return [
                     'success' => false,
                     'message' => 'Có lỗi xảy ra khi gọi API',
                     'error' => $e->getMessage()
@@ -204,7 +180,12 @@ class ApiService
         return in_array($result['status_code'] ?? 0, $retryableStatuses);
     }
 
-    // Authentication methods
+    /**
+     * Đăng nhập người dùng
+     * 
+     * @param array $credentials - Thông tin đăng nhập (email, password)
+     * @return array - Kết quả đăng nhập
+     */
     public function login($credentials)
     {
         $result = $this->makeRequest('post', '/auth/login', $credentials);
@@ -268,9 +249,7 @@ class ApiService
     public function updateMovie($id, $data)
     {
         // Check if token is valid, if not try to refresh
-        if (!$this->token || $this->isTokenExpired()) {
-            \Log::info('Token expired or invalid, attempting to refresh...');
-            $refreshResult = $this->refreshToken();
+        if (!$this->token || $this->isTokenExpired()) {$refreshResult = $this->refreshToken();
             if (!$refreshResult['success']) {
                 return [
                     'success' => false,
@@ -332,24 +311,11 @@ class ApiService
             ];
         }
 
-        // Debug logging
-        \Log::info('Update movie data:', [
-            'id' => $id,
-            'formData' => $formData,
-            'files' => array_keys($files),
-            'multipart_count' => count($multipart),
-            'token' => $this->token,
-            'session_token' => Session::get('jwt_token'),
-            'session_user' => Session::get('user')
-        ]);
-
         // Call real API endpoint
         try {
             // Use multipart for file uploads, JSON for regular updates
             if (!empty($files)) {
                 // Has files, use Laravel HTTP client with asMultipart
-                \Log::info('Using Laravel HTTP client with asMultipart for file upload');
-                
                 // Convert multipart array to Laravel HTTP format
                 $multipartData = [];
                 foreach ($multipart as $item) {
@@ -369,13 +335,6 @@ class ApiService
                     }
                 }
                 
-                \Log::info('Multipart data prepared:', [
-                    'count' => count($multipartData),
-                    'files' => array_filter($multipartData, function($item) {
-                        return isset($item['filename']);
-                    })
-                ]);
-                
                 $response = Http::withHeaders($this->getHeaders())
                     ->asMultipart()
                     ->timeout(60)
@@ -387,44 +346,22 @@ class ApiService
                     ->timeout(60) // 60 seconds timeout
                     ->put($this->baseUrl . '/movies/' . $id, $data);
             }
-
-            \Log::info('API Response:', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-                'headers' => $response->headers()
-            ]);
-
+            
             if ($response->successful()) {
                 return $this->handleResponse($response);
             } else {
-                \Log::error('API Update failed:', [
-                    'status' => $response->status(),
-                    'body' => $response->body()
-                ]);
-                
                 return [
                     'success' => false,
                     'message' => 'Cập nhật phim thất bại: ' . ($response->json()['message'] ?? 'Unknown error'),
                     'data' => null
                 ];
             }
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            \Log::error('API Update timeout:', [
-                'error' => $e->getMessage()
-            ]);
-            
-            return [
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {return [
                 'success' => false,
                 'message' => 'Kết nối API bị timeout. Vui lòng thử lại.',
                 'data' => null
             ];
-        } catch (\Exception $e) {
-            \Log::error('API Update exception:', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return [
+        } catch (\Exception $e) {return [
                 'success' => false,
                 'message' => 'Cập nhật phim thất bại: ' . $e->getMessage(),
                 'data' => null
@@ -445,9 +382,7 @@ class ApiService
             $payload = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], explode('.', $this->token)[1])), true);
             $exp = $payload['exp'] ?? 0;
             return $exp < time();
-        } catch (\Exception $e) {
-            \Log::error('Token validation error: ' . $e->getMessage());
-            return true;
+        } catch (\Exception $e) {return true;
         }
     }
 
@@ -632,11 +567,9 @@ class ApiService
         return $this->makeRequest('post', '/users/' . $userId . '/revoke-admin');
     }
 
-    public function toggleUserStatus($userId, $activate)
+    public function toggleUserStatus($userId)
     {
-        return $this->makeRequest('post', '/users/' . $userId . '/toggle-status', [
-            'activate' => $activate
-        ]);
+        return $this->makeRequest('post', '/users/' . $userId . '/toggle-status');
     }
 
     public function deleteUser($userId)
@@ -646,20 +579,28 @@ class ApiService
 
     public function exportUsers()
     {
-        $response = Http::withHeaders($this->getHeaders())
-            ->get($this->baseUrl . '/users/export');
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get($this->baseUrl . '/users/export');
 
-        if ($response->successful()) {
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'data' => $response->body(),
+                    'content_type' => $response->header('Content-Type'),
+                    'filename' => $response->header('Content-Disposition')
+                ];
+            }
+
             return [
-                'success' => true,
-                'data' => $response->body()
+                'success' => false,
+                'message' => 'Không thể xuất dữ liệu người dùng: ' . $response->status()
+            ];
+        } catch (\Exception $e) {return [
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi gọi API xuất dữ liệu: ' . $e->getMessage()
             ];
         }
-
-        return [
-            'success' => false,
-            'message' => 'Không thể xuất dữ liệu người dùng'
-        ];
     }
 
     public function getReviews()
@@ -694,7 +635,6 @@ class ApiService
     {
         return $this->makeRequest('delete', "/comments/{$id}");
     }
-
 
     public function getViolations()
     {
@@ -743,7 +683,6 @@ class ApiService
         return $this->handleResponse($response);
     }
 
-
     // Get current user from session
     public function getCurrentUserFromSession()
     {
@@ -760,7 +699,6 @@ class ApiService
     {
         return $this->makeRequest('post', '/change-password', $data);
     }
-
 
     public function getScheduleSeats($scheduleId)
     {
@@ -811,7 +749,6 @@ class ApiService
 
     // Review methods
 
-
     public function updateReview($reviewId, $reviewData)
     {
         return $this->makeRequest('put', '/reviews/' . $reviewId, $reviewData);
@@ -824,13 +761,10 @@ class ApiService
 
     // Comment methods
 
-
     public function createReply($commentId, $content)
     {
         return $this->makeRequest('post', '/comments/' . $commentId . '/reply', ['content' => $content]);
     }
-
-
 
     // Favorites methods
     public function getUserFavorites($userId)
@@ -1006,22 +940,8 @@ class ApiService
             ];
         }
 
-        // Debug logging
-        \Log::info('Create Movie Request Data:', [
-            'formData' => $formData,
-            'files' => array_keys($files),
-            'multipart_count' => count($multipart),
-            'multipart_sample' => array_slice($multipart, 0, 5) // First 5 items for debugging
-        ]);
-        
-        // Debug: Log the actual multipart data being sent
-        \Log::info('Multipart Data:', $multipart);
-
         // Always use with-files endpoint for file uploads
         $endpoint = '/movies/with-files';
-        
-        // Debug: Log which endpoint is being used
-        \Log::info('Using endpoint: ' . $endpoint . ' (files count: ' . count($files) . ')');
         
         $response = Http::withToken($this->token)
             ->asMultipart()
@@ -1029,9 +949,6 @@ class ApiService
 
         $result = $this->handleResponse($response);
         
-        // Debug logging
-        \Log::info('Create Movie API Response:', $result);
-
         return $result;
     }
 
@@ -1052,8 +969,6 @@ class ApiService
     {
         return $this->makeRequest('get', '/directors');
     }
-
-
 
     public function getActors()
     {
@@ -1130,4 +1045,5 @@ class ApiService
     {
         return $this->makeRequest('post', "/reviews/{$reviewId}/reply", $data);
     }
+
 }
